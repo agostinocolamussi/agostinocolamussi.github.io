@@ -1,0 +1,4 @@
+User-agent: Googlebot-Image
+Disallow: /*.gif$
+Sitemap: https://agostinocolamussi.github.io/sitemap.xml
+
