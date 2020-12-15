@@ -63,8 +63,8 @@
 <meta name="description" content="Turn Ideas into Reality. Sono un full-stack developer. Rutigliano,Bari. Cell:3491141381" />
 
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
+<meta name="apple-mobile-web-app-status-bar-style" content="blackt">
+<meta name="apple-mobile-web-app-title" content="Agostino developer">
 <link rel="canonical" href="https://agostinocolamussi.github.io"/>
 <link rel="icon" href="favicon.ico">
 
@@ -3283,7 +3283,19 @@ input[type=text]:focus, textarea:focus {
 	  });
 	}
   </script>
-	<script src="contenuti/cache/min/1/c51b64b9e13c6db0ef718482620d736f.js" data-minify="1"></script></body><div class="jquery-script-clear" style="z-index: 999999;"></div>
+  
+	<script src="contenuti/cache/min/1/c51b64b9e13c6db0ef718482620d736f.js" data-minify="1">
+	</script>
+	<script async>
+		window.onload = () => {
+		'use strict'; 
+		if ('serviceWorker' in navigator) {
+		navigator.serviceWorker
+		.register('./service-worker.js');
+		}
+		}
+		</script>
+</body><div class="jquery-script-clear" style="z-index: 999999;"></div>
 
 	<script type="text/javascript">
 
