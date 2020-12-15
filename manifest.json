@@ -5,7 +5,7 @@
     "short_name": "Agostino developer",
     "scope": "/",
     "display": "standalone",
-    "start_url": "https://agostinocolamussi.github.io/",
+    "start_url": "/",
     "background_color": "#000000",
     "theme_color": "#000000",
     "description": "Ciao! sono uno sviluppatore web e software",
