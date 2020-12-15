@@ -62,3 +62,57 @@ self.addEventListener('fetch', event => {
     );
   }
 });
+window.addEventListener('load', () => {
+  
+      const base = document.querySelector('base');
+
+      let baseUrl = base && base.href || '';
+  
+      if (!baseUrl.endsWith('/')) {
+  
+          baseUrl = `${baseUrl}/`;
+  
+      }  
+  
+    
+  
+      if ('serviceWorker' in navigator) {
+  
+          navigator.serviceWorker.register(`${baseUrl}sw.js`)
+  
+              .then( registration => {
+  
+              // Registration was successful
+  
+              console.log('ServiceWorker registration successful with scope: ', registration.scope);
+  
+          })
+  
+          .catch(err => {
+  
+              // registration failed :(
+  
+              console.log('ServiceWorker registration failed: ', err);
+  
+          });
+  
+      }
+  
+  });    
+  self.addEventListener('fetch', event => {
+  
+      console.log('[Service Worker] Fetching something ....', event);
+  
+  
+      // This fixes a weird bug in Chrome when you open the Developer Tools
+  
+      if (event.request.cache === 'only-if-cached' && event.request.mode !== 'same-origin') {
+  
+          return;
+  
+      }
+  
+  
+      event.respondWith(fetch(event.request));
+  
+  });
