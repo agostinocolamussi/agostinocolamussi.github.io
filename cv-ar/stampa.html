@@ -1,1 +1,171 @@
-@stampa.html
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stampa QR — Agostino Colamussi</title>
+<style>
+  :root { --accent: #01696f; --ink: #171614; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #e8e6e0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    display: grid;
+    place-items: center;
+    min-height: 100dvh;
+    padding: 2rem;
+  }
+  .toolbar {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: .75rem;
+    align-items: center;
+    z-index: 10;
+  }
+  .toolbar button {
+    border: none;
+    cursor: pointer;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+    font-size: .95rem;
+    padding: .8rem 1.5rem;
+    border-radius: 999px;
+    box-shadow: 0 4px 14px rgb(1 105 111 / .3);
+  }
+  .toolbar button:hover { filter: brightness(1.1); }
+  .toolbar label {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .85rem;
+    color: var(--ink);
+    background: #fff;
+    padding: .55rem 1rem;
+    border-radius: 999px;
+    box-shadow: 0 2px 8px rgb(0 0 0 / .08);
+    cursor: pointer;
+    user-select: none;
+  }
+  .sheet {
+    width: 148mm;
+    height: 210mm;
+    background: #fff;
+    box-shadow: 0 10px 40px rgb(0 0 0 / .18);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16mm;
+  }
+  .name {
+    text-align: center;
+    letter-spacing: .35em;
+    font-size: 13pt;
+    font-weight: 700;
+    color: var(--ink);
+    text-transform: uppercase;
+  }
+  .role {
+    margin-top: 3mm;
+    letter-spacing: .12em;
+    font-size: 7pt;
+    color: var(--accent);
+    text-transform: uppercase;
+    text-align: center;
+  }
+  .qr-wrap { position: relative; padding: 6mm; }
+  .qr-wrap.frame::before,
+  .qr-wrap.frame::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .qr-wrap.frame::before {
+    border: 1.2mm solid var(--accent);
+    border-radius: 4mm;
+  }
+  .qr-wrap.frame::after {
+    background: repeating-linear-gradient(45deg, transparent 0 2.2mm, rgb(1 105 111 / .16) 2.2mm 3mm);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask-composite: exclude;
+    padding: 3mm;
+    border-radius: 4mm;
+  }
+  canvas#qr { display: block; width: 78mm; height: 78mm; image-rendering: pixelated; }
+  .hint {
+    text-align: center;
+    font-size: 8pt;
+    line-height: 1.7;
+    color: var(--ink);
+  }
+  .hint strong { color: var(--accent); }
+  @page { size: A5 portrait; margin: 0; }
+  @media print {
+    body { background: none; padding: 0; min-height: auto; display: block; }
+    .toolbar { display: none; }
+    .sheet { box-shadow: none; width: 100%; height: 100dvh; }
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <button type="button" onclick="window.print()">Stampa</button>
+    <label><input type="checkbox" id="frameToggle" /> Cornice decorativa (aiuta il tracciamento)</label>
+  </div>
+
+  <div class="sheet">
+    <header style="text-align:center;">
+      <div class="name">Agostino Colamussi</div>
+      <div class="role">Software Developer · PA · AI</div>
+    </header>
+    <div class="qr-wrap" id="qrWrap"><canvas id="qr"></canvas></div>
+    <p class="hint">
+      Inquadra il codice con la fotocamera del telefono<br />
+      e punta lo schermo a questo foglio:<br />
+      <strong>il CV esce dal foglio in 3D.</strong><br />
+      agostinocolamussi.github.io
+    </p>
+  </div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script>
+  const AR_URL = 'https://agostinocolamussi.github.io/cv-ar/';
+
+  function drawQR(canvas, text, px) {
+    const qr = qrcode(0, 'M');
+    qr.addData(text);
+    qr.make();
+    const count = qr.getModuleCount();
+    const quiet = 4;
+    const total = count + quiet * 2;
+    const scale = px / total;
+    canvas.width = px;
+    canvas.height = px;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, px, px);
+    ctx.fillStyle = '#000000';
+    for (let r = 0; r < count; r++) {
+      for (let c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) {
+          ctx.fillRect(Math.floor((c + quiet) * scale), Math.floor((r + quiet) * scale), Math.ceil(scale), Math.ceil(scale));
+        }
+      }
+    }
+  }
+
+  drawQR(document.getElementById('qr'), AR_URL, 960);
+
+  document.getElementById('frameToggle').addEventListener('change', (e) => {
+    document.getElementById('qrWrap').classList.toggle('frame', e.target.checked);
+  });
+</script>
+</body>
+</html>

@@ -1,1 +1,466 @@
-@index.html
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>CV AR — Agostino Colamussi</title>
+<meta name="description" content="Inquadra il codice QR stampato e il CV di Agostino Colamussi esce dal foglio in 3D." />
+<style>
+  :root { --accent: #01696f; --accent-light: #4f98a3; --ink: #171614; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; background: #000; color: var(--ink); }
+  #app { position: fixed; inset: 0; }
+  #app video { object-fit: cover; }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+    background: radial-gradient(circle at 50% 30%, rgb(1 105 111 / .12), transparent 60%), linear-gradient(180deg, #f7f6f2, #e9e7e1);
+    z-index: 20;
+    transition: opacity .45s ease;
+  }
+  .overlay.hidden { opacity: 0; pointer-events: none; }
+
+  .mark {
+    width: 64px; height: 64px;
+    color: var(--accent);
+    margin-bottom: 1.25rem;
+  }
+  .overlay h1 {
+    font-size: clamp(1.6rem, 5vw, 2.4rem);
+    line-height: 1.15;
+    max-width: 16ch;
+    letter-spacing: -.01em;
+  }
+  .overlay h1 em { font-style: normal; color: var(--accent); }
+  .overlay p.sub { margin-top: .9rem; color: #67655f; font-size: .95rem; max-width: 40ch; line-height: 1.6; }
+
+  .steps { display: grid; gap: .55rem; margin: 1.75rem 0; text-align: left; }
+  .steps div {
+    display: flex; align-items: center; gap: .7rem;
+    background: rgb(255 255 255 / .75);
+    border: 1px solid rgb(23 22 20 / .08);
+    border-radius: 999px;
+    padding: .55rem 1.1rem .55rem .6rem;
+    font-size: .88rem; font-weight: 500;
+  }
+  .steps span.n {
+    flex: 0 0 auto;
+    width: 26px; height: 26px;
+    display: grid; place-items: center;
+    background: var(--accent); color: #fff;
+    border-radius: 999px;
+    font-size: .72rem; font-weight: 700;
+  }
+
+  #startBtn {
+    border: none; cursor: pointer;
+    background: var(--accent); color: #fff;
+    font-size: 1rem; font-weight: 600;
+    padding: 1rem 2.4rem;
+    border-radius: 999px;
+    box-shadow: 0 8px 24px rgb(1 105 111 / .35);
+    transition: transform .18s ease, filter .18s ease;
+  }
+  #startBtn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+  #startBtn[disabled] { opacity: .6; pointer-events: none; }
+
+  .classic { margin-top: 1.4rem; font-size: .85rem; color: var(--accent); font-weight: 600; text-decoration: none; border-bottom: 1px solid currentColor; padding-bottom: 1px; }
+
+  #hint {
+    position: fixed;
+    left: 50%; bottom: max(1.5rem, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    display: flex; align-items: center; gap: .6rem;
+    background: rgb(23 22 20 / .82);
+    color: #f3f2ef;
+    backdrop-filter: blur(10px);
+    padding: .8rem 1.3rem;
+    border-radius: 999px;
+    font-size: .9rem; font-weight: 500;
+    z-index: 15;
+    transition: opacity .3s ease;
+    white-space: nowrap;
+  }
+  #hint.hidden { opacity: 0; }
+  #hint svg { animation: scan 1.6s ease-in-out infinite; }
+  @keyframes scan { 0%,100% { transform: translateY(-2px);} 50% { transform: translateY(2px);} }
+
+  #errorBox {
+    position: fixed; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff; color: var(--ink);
+    padding: 1.5rem 1.8rem; border-radius: 1rem;
+    box-shadow: 0 20px 60px rgb(0 0 0 / .3);
+    z-index: 30; max-width: 320px; text-align: center;
+    font-size: .92rem; line-height: 1.55;
+  }
+  #errorBox strong { color: #b3261e; display: block; margin-bottom: .5rem; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="hint" class="hidden">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f98a3" stroke-width="2" stroke-linecap="round"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+  Inquadra il codice QR stampato
+</div>
+
+<div id="landing" class="overlay">
+  <svg class="mark" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 44V20.5C12 15.8056 15.8056 12 20.5 12H44" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><path d="M52 20V43.5C52 48.1944 48.1944 52 43.5 52H20" stroke="currentColor" stroke-width="5" stroke-linecap="round"/><path d="M25 32L31 38L40 25" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <h1>Il mio CV esce <em>dal foglio</em> in realtà aumentata.</h1>
+  <p class="sub">Punta la fotocamera del telefono al codice QR stampato e il curriculum apparirà in 3D sopra il foglio.</p>
+  <div class="steps">
+    <div><span class="n">1</span>Consenti l'accesso alla fotocamera</div>
+    <div><span class="n">2</span>Inquadra il codice QR sul foglio</div>
+    <div><span class="n">3</span>Guarda il CV emergere in 3D</div>
+  </div>
+  <button id="startBtn" type="button">Attiva la fotocamera</button>
+  <a class="classic" href="../index.html">Versione classica del sito</a>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.150.1/examples/jsm/",
+    "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { MindARThree } from 'mindar-image-three';
+
+const ACCENT = '#01696f';
+const ACCENT_DARK = '#0b3a3e';
+const INK = '#28251d';
+const MUTED = '#67655f';
+
+function rr(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function loadAvatar() {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = '../assets/avatar.jpg';
+  });
+}
+
+function makePanelTexture(avatar) {
+  const W = 1024, H = 1365;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  const R = 56;
+  ctx.clearRect(0, 0, W, H);
+
+  rr(ctx, 0, 0, W, H, R);
+  ctx.fillStyle = '#fbfaf7';
+  ctx.fill();
+
+  ctx.fillStyle = ACCENT;
+  rr(ctx, R * 0.6, R * 0.6, W - R * 1.2, 300, 36);
+  ctx.fill();
+
+  if (avatar) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(R * 0.6 + 150, R * 0.6 + 150, 108, 0, Math.PI * 2);
+    ctx.clip();
+    const side = Math.min(avatar.width, avatar.height);
+    ctx.drawImage(avatar, (avatar.width - side) / 2, (avatar.height - side) / 2, side, side,
+      R * 0.6 + 42, R * 0.6 + 42, 216, 216);
+    ctx.restore();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.arc(R * 0.6 + 150, R * 0.6 + 150, 112, 0, Math.PI * 2);
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '700 120px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('AC', R * 0.6 + 150, R * 0.6 + 155);
+  }
+
+  const tx = avatar ? R * 0.6 + 310 : R * 0.6 + 60;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '700 74px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('Agostino', tx, R * 0.6 + 130);
+  ctx.fillText('Colamussi', tx, R * 0.6 + 212);
+  ctx.font = '600 33px "Segoe UI", system-ui, sans-serif';
+  ctx.fillStyle = 'rgb(255 255 255 / .82)';
+  ctx.fillText('SOFTWARE DEVELOPER · PA · AI', tx, R * 0.6 + 268);
+
+  let y = 470;
+  const section = (title) => {
+    ctx.fillStyle = ACCENT;
+    ctx.font = '700 30px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText(title.toUpperCase(), 90, y);
+    ctx.fillRect(90, y + 16, 64, 5);
+    y += 66;
+  };
+  const bodyLine = (text, font = '400 38px "Segoe UI", system-ui, sans-serif', color = INK, lh = 46) => {
+    ctx.font = font;
+    ctx.fillStyle = color;
+    ctx.fillText(text, 90, y);
+    y += lh;
+  };
+
+  section('Profilo');
+  bodyLine('5+ anni in soluzioni digitali per la PA:');
+  bodyLine('Angular, backend serverless e AI');
+  bodyLine('applicata a pratiche e documenti.');
+  y += 26;
+
+  section('Competenze');
+  ctx.font = '500 38px "Segoe UI", system-ui, sans-serif';
+  const skills = [
+    'Angular · TypeScript · RxJS',
+    'Firebase · Supabase · API REST',
+    'LLM · RAG · Agenti AI · MCP',
+    'Accessibilità WCAG · AGID · SPID',
+  ];
+  for (const s of skills) {
+    ctx.fillStyle = ACCENT;
+    ctx.fillText('▸', 90, y);
+    ctx.fillStyle = INK;
+    ctx.fillText(s, 128, y);
+    y += 58;
+  }
+  y += 14;
+
+  section('Progetti');
+  ctx.font = '600 36px "Segoe UI", system-ui, sans-serif';
+  const projects = [
+    ['autorizzo.com', 'pratiche autorizzative online'],
+    ['portale cittadino', 'tributi e servizi al cittadino'],
+  ];
+  for (const [name, desc] of projects) {
+    ctx.fillStyle = ACCENT;
+    ctx.fillText(name, 90, y);
+    ctx.font = '400 32px "Segoe UI", system-ui, sans-serif';
+    ctx.fillStyle = MUTED;
+    ctx.fillText(desc, 90, y + 42);
+    ctx.font = '600 36px "Segoe UI", system-ui, sans-serif';
+    y += 92;
+  }
+  y -= 10;
+
+  section('Contatti');
+  ctx.font = '600 36px "Segoe UI", system-ui, sans-serif';
+  ctx.fillStyle = ACCENT;
+  ctx.fillText('agostinocolamussi@gmail.com', 90, y);
+  y += 54;
+  ctx.fillText('linkedin.com/in/agostino-colamussi', 90, y);
+  y += 54;
+  ctx.font = '400 32px "Segoe UI", system-ui, sans-serif';
+  ctx.fillStyle = MUTED;
+  ctx.fillText('Rutigliano (BA) · Italia', 90, y);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+function makeChipTexture(text) {
+  const pad = 44, fs = 54;
+  const meas = document.createElement('canvas').getContext('2d');
+  meas.font = `600 ${fs}px "Segoe UI", system-ui, sans-serif`;
+  const w = Math.ceil(meas.measureText(text).width) + pad * 2;
+  const h = fs + pad * 1.15;
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  rr(ctx, 0, 0, w, h, h / 2);
+  ctx.fillStyle = 'rgb(11 58 62 / .94)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgb(79 152 163 / .8)';
+  ctx.lineWidth = 4;
+  rr(ctx, 2, 2, w - 4, h - 4, (h - 4) / 2);
+  ctx.stroke();
+  ctx.fillStyle = '#eef7f6';
+  ctx.font = `600 ${fs}px "Segoe UI", system-ui, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, w / 2, h / 2 + 3);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return { tex, aspect: w / h };
+}
+
+function makeBeamTexture() {
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 256;
+  const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0, 256, 0, 0);
+  g.addColorStop(0, 'rgb(79 152 163 / 0)');
+  g.addColorStop(1, 'rgb(79 152 163 / .55)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 64, 256);
+  return new THREE.CanvasTexture(c);
+}
+
+const easeOutBack = (t) => {
+  const c1 = 1.70158, c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+};
+
+async function main() {
+  const btn = document.getElementById('startBtn');
+  const landing = document.getElementById('landing');
+  const hint = document.getElementById('hint');
+
+  const showError = (err) => {
+    landing.classList.remove('hidden');
+    hint.classList.add('hidden');
+    btn.disabled = false;
+    btn.textContent = 'Attiva la fotocamera';
+    const box = document.createElement('div');
+    box.id = 'errorBox';
+    box.innerHTML = '<strong>Fotocamera non disponibile</strong>' +
+      (err && (err.name === 'NotAllowedError' || err.name === 'SecurityError')
+        ? 'Permesso negato. Consenti l\'accesso alla fotocamera dalle impostazioni del browser e ricarica la pagina.'
+        : err && err.name === 'NotFoundError'
+          ? 'Nessuna fotocamera trovata su questo dispositivo. Apri questa pagina dal telefono per vivere l\'esperienza AR.'
+          : 'Serve una fotocamera funzionante e una connessione HTTPS. Riprova o apri la <a href="../index.html">versione classica</a>.');
+    document.body.appendChild(box);
+    setTimeout(() => box.remove(), 10000);
+  };
+
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'Caricamento…';
+
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw Object.assign(new Error('getUserMedia non disponibile'), { name: 'SecurityError' });
+      }
+      const probe = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      probe.getTracks().forEach(t => t.stop());
+
+      const mindarThree = new MindARThree({
+        container: document.querySelector('#app'),
+        imageTargetSrc: './targets/target.mind',
+        maxTrack: 1,
+      });
+      const { renderer, scene, camera } = mindarThree;
+
+      const anchor = mindarThree.addAnchor(0);
+      const group = anchor.group;
+
+      const avatar = await loadAvatar();
+
+      const panelW = 1.62, panelH = 2.16;
+      const backing = new THREE.Mesh(
+        new THREE.PlaneGeometry(panelW + 0.05, panelH + 0.05),
+        new THREE.MeshBasicMaterial({ color: ACCENT_DARK })
+      );
+      backing.position.set(0.02, panelH / 2 + 0.12, -0.012);
+
+      const panel = new THREE.Mesh(
+        new THREE.PlaneGeometry(panelW, panelH),
+        new THREE.MeshBasicMaterial({ map: makePanelTexture(avatar), transparent: true })
+      );
+      panel.position.set(0, panelH / 2 + 0.12, 0);
+
+      const beam = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.55, 1.15),
+        new THREE.MeshBasicMaterial({ map: makeBeamTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })
+      );
+      beam.position.set(0, 0.62, -0.008);
+
+      group.add(backing, panel, beam);
+
+      const chipsData = [
+        ['Angular', -0.98, 2.06],
+        ['Serverless', 0.98, 1.86],
+        ['AI · LLM', -0.95, 1.62],
+        ['PA digitale', 0.97, 1.42],
+      ];
+      const chipBase = [];
+      for (const [label, x, y] of chipsData) {
+        const { tex, aspect } = makeChipTexture(label);
+        const h = 0.17;
+        const mesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(h * aspect, h),
+          new THREE.MeshBasicMaterial({ map: tex, transparent: true })
+        );
+        mesh.position.set(x * 1.62, y, 0.05);
+        group.add(mesh);
+        chipBase.push({ mesh, x: x * 1.62, y });
+      }
+
+      const elements = [
+        { obj: beam, delay: 0, dur: 0.45 },
+        { obj: backing, delay: 0.15, dur: 0.55 },
+        { obj: panel, delay: 0.2, dur: 0.65 },
+        ...chipBase.map((c, i) => ({ obj: c.mesh, delay: 0.75 + i * 0.14, dur: 0.5 })),
+      ];
+      elements.forEach(e => { e.obj.scale.setScalar(0.0001); });
+
+      let visible = false;
+      let tFound = 0;
+
+      await mindarThree.start();
+
+      landing.classList.add('hidden');
+      hint.classList.remove('hidden');
+
+      const clock = new THREE.Clock();
+      renderer.setAnimationLoop(() => {
+        const t = clock.getElapsedTime();
+        const nowVisible = group.visible;
+        if (nowVisible !== visible) {
+          visible = nowVisible;
+          if (visible) { tFound = t; hint.classList.add('hidden'); }
+          else { hint.classList.remove('hidden'); }
+        }
+
+        if (visible) {
+          for (const e of elements) {
+            const k = THREE.MathUtils.clamp((t - tFound - e.delay) / e.dur, 0, 1);
+            e.obj.scale.setScalar(Math.max(0.0001, easeOutBack(k)));
+          }
+          group.rotation.y = Math.sin(t * 0.9) * 0.07;
+          for (let i = 0; i < chipBase.length; i++) {
+            const c = chipBase[i];
+            const k = THREE.MathUtils.clamp((t - tFound - (0.75 + i * 0.14)) / 0.5, 0, 1);
+            if (k >= 1) c.mesh.position.y = c.y + Math.sin(t * 2.2 + i * 1.7) * 0.012;
+          }
+        } else {
+          elements.forEach(e => e.obj.scale.setScalar(0.0001));
+        }
+
+        renderer.render(scene, camera);
+      });
+    } catch (err) {
+      console.error('CV AR init:', err);
+      showError(err);
+    }
+  });
+
+  window.__cvArReady = true;
+}
+
+main();
+</script>
+</body>
+</html>
